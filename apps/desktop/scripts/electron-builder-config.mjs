@@ -146,7 +146,7 @@ export function createElectronBuilderConfig(
     asarUnpack: unpack,
     extraResources: [
       { from: buildPaths.runtime, to: 'runtime' },
-      { from: fileURLToPath(new URL(`../resources/${resolvedPlatform === 'linux' ? 'icon.png' : 'icon-windows.png'}`, import.meta.url)), to: 'icon.png' },
+      { from: fileURLToPath(new URL(`../resources/${resolvedPlatform === 'linux' ? 'icon-512.png' : 'icon-windows.png'}`, import.meta.url)), to: 'icon.png' },
       // Windows tray bitmaps; macOS keeps the Dock and ships no menu bar icon.
       ...(packagesWindows ? [{ from: fileURLToPath(new URL('../resources/tray-windows.ico', import.meta.url)), to: 'tray.ico' }] : []),
     ],
@@ -235,7 +235,9 @@ export function createElectronBuilderConfig(
     },
     linux: {
       category: 'Development',
-      icon: fileURLToPath(new URL('../resources/icon.png', import.meta.url)),
+      // electron-builder rejects PNG icons larger than 512px on Linux (falls back to the default
+      // Electron icon); the official icon.png is 1104px, so the 512px companion is used here.
+      icon: fileURLToPath(new URL('../resources/icon-512.png', import.meta.url)),
       executableName: 'deepseek-harness',
       target: ['AppImage'],
     },
