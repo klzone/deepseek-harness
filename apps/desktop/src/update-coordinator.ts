@@ -8,6 +8,7 @@ import { gt, valid } from 'semver'
 import type { DesktopUpdateState } from './ipc.ts'
 import { DesktopUpdateHttpExecutor } from './update-http-executor.ts'
 import { DesktopUpdatePreparationError } from './update-error.ts'
+import type { LinuxUpdateChecker } from './linux-update-checker.ts'
 
 const { autoUpdater } = electronUpdater
 
@@ -53,7 +54,9 @@ export class DesktopUpdateCoordinator {
     private readonly updater: AppUpdater = autoUpdater,
     private readonly enabled: () => boolean = () => app.isPackaged && existsSync(join(process.resourcesPath, 'app-update.yml')),
     private readonly currentVersion: () => string = () => app.getVersion(),
-    private readonly downloadResult?: (success: boolean, reason?: string) => void,
+    private readonly downloadResult: ((success: boolean, reason?: string) => void) | undefined,
+    private readonly linuxChecker: LinuxUpdateChecker | undefined,
+    private readonly openReleasePage: ((url: string) => Promise<void>) | undefined,
   ) {
     if (updater === autoUpdater) {
       // electron-updater omits this internal transport property from its public declarations.
@@ -101,6 +104,14 @@ export class DesktopUpdateCoordinator {
   async download(version: string): Promise<DesktopUpdateState> {
     this.assertLive()
     if (this.downloaded || this.installOperation !== undefined) return this.current
+    // Community Linux: the GitHub release has no ESR package to install through the quit-and-install
+    // pipeline. Open the release page instead so the user can run the .deb/AppImage updater.
+    if (this.linuxChecker !== undefined && !this.enabled()) {
+      const release = this.current.linuxRelease
+      if (release === undefined) return this.setState(this.failure(new Error('desktop update: no release to open'), 'download'))
+      void this.openReleasePage?.(release.htmlUrl)
+      return this.setState({ phase: 'ready', version, linuxRelease: release })
+    }
     this.downloadOperation ??= Promise.resolve().then(async () => {
       await this.checkOperation
       this.assertLive()
@@ -129,6 +140,9 @@ export class DesktopUpdateCoordinator {
   async install(version: string): Promise<DesktopUpdateState> {
     this.assertLive()
     if (!this.downloaded || this.downloadOperation !== undefined || version !== this.candidate) throw new Error('desktop update: confirmed target is not ready')
+    // Community Linux: the download step already opened the release page; installation is a manual
+    // .deb / AppImage upgrade, so report readiness instead of entering the ESR quit-and-install path.
+    if (this.linuxChecker !== undefined && !this.enabled()) return this.setState(this.current)
     this.installOperation ??= Promise.resolve().then(async () => {
       this.setState({ phase: 'installing', version })
       try {
@@ -182,7 +196,16 @@ export class DesktopUpdateCoordinator {
   private async doCheck(): Promise<DesktopUpdateState> {
     try {
       this.assertLive()
-      if (!this.enabled()) throw new Error('desktop update: this application has no packaged update source')
+      if (!this.enabled()) {
+        // Community Linux build: no packaged ESR feed, fall back to the fork's GitHub Releases.
+        if (this.linuxChecker !== undefined) {
+          const release = await this.linuxChecker.check(this.currentVersion())
+          this.candidate = release?.version
+          if (release === undefined) return this.setState({ phase: 'idle' })
+          return this.setState({ phase: 'available', version: release.version, linuxRelease: release })
+        }
+        throw new Error('desktop update: this application has no packaged update source')
+      }
       const result = await this.updater.checkForUpdates()
       if (result === null) throw new Error('desktop update: no check result was returned')
       const version = result.updateInfo.version

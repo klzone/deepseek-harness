@@ -34,6 +34,7 @@ import { readDeviceInfo } from './device-info.ts'
 import { desktopUpdateReadyConfirmation, formatDesktopMessage, resolveDesktopLocale, resolveDesktopStartupLocale } from './locale.ts'
 import { claimDesktopSingleInstance } from './single-instance.ts'
 import { DesktopUpdateCoordinator } from './update-coordinator.ts'
+import { GitHubReleaseUpdateChecker } from './linux-update-checker.ts'
 import { DesktopCommandManager } from './command-management.ts'
 import { serveWebDocument, authenticateWebHost, forwardWebRequest } from './web-document.ts'
 import { DesktopFatalRecovery } from './fatal-recovery.ts'
@@ -581,6 +582,9 @@ async function main(): Promise<void> {
     return startup
   }
 
+  const linuxUpdateChecker = process.platform === 'linux'
+    ? new GitHubReleaseUpdateChecker(process.env.DSH_DESKTOP_UPDATE_REPO ?? 'klzone/deepseek-harness')
+    : undefined
   const updates = new DesktopUpdateCoordinator(
     publishUpdate,
     async () => {
@@ -634,6 +638,8 @@ async function main(): Promise<void> {
     },
     undefined, undefined, undefined,
     (success, reason) => { void track('desktop_upgrade_download_result', { is_success: success, ...reason === undefined ? {} : { error_reason: reason } }) },
+    linuxUpdateChecker,
+    (url) => shell.openExternal(url),
 
   )
 
@@ -839,6 +845,13 @@ async function main(): Promise<void> {
           return
         }
         if (state.phase !== 'available' && !(state.phase === 'error' && state.failedOperation === 'download')) return
+        if (state.linuxRelease !== undefined) {
+          // Community Linux build: the check hit the fork's GitHub Releases instead of an ESR feed.
+          // Open the release page where the .deb / AppImage assets live.
+          controller?.abort()
+          await shell.openExternal(state.linuxRelease.htmlUrl)
+          return
+        }
         if (manual) {
           const result = await ordinaryMessageBox({ title: locale.messages.updateCheckTitle,
             message: formatDesktopMessage(locale.messages.updateAvailable, { version: state.version ?? '' }),

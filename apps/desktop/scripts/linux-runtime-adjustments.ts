@@ -21,7 +21,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFil
 import { join } from 'node:path'
 
 /** Desktop build target names this module reasons about. */
-type DesktopTargetName = 'mac-arm64' | 'mac-x64' | 'win-x64' | 'linux-x64'
+type DesktopTargetName = 'mac-arm64' | 'mac-x64' | 'win-x64' | 'linux-x64' | 'linux-arm64'
 
 /** Package that carries the sharp rebuild matching the workspace's sharp version. */
 const SHARP_PACKAGE = '@janhapke/sharp-electron'
