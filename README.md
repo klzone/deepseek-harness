@@ -4,74 +4,34 @@ English | [中文](README.zh.md)
 
 DeepSeek Harness (`dsh`) is an open-source agent harness developed by [DeepSeek AI](https://deepseek.com).
 
-It is built on an **everything-is-a-plugin** architecture and powered by [Cordis](https://github.com/cordiverse/cordis), whose design is described in [_A Programming Paradigm for Spatiotemporal Composability_](https://arxiv.org/abs/2608.25512).
+## 社区 Linux 发行说明（本 fork）
 
-Documentation: [https://deepseek-harness.github.io/deepseek-harness/](https://deepseek-harness.github.io/deepseek-harness/)
+> 本仓库为官方 `deepseek-harness` 的社区 Linux 构建 fork（基线：dsh 0.2.0-rc.2，上游提交 `639ed01`）。
+> 官方仓库暂不接受源码 PR，故 Linux 桌面构建支持在此独立维护。详见 **[LINUX.md](LINUX.md)**（`linux-desktop-build` 分支）。
 
-## Developer preview
+### 在 Linux 上快速构建 DSH Desktop（AppImage）
 
-DeepSeek Harness is in _developer preview_ and iterating rapidly. **THERE WILL BE COMPATIBILITY-BREAKING CHANGES.**
+```bash
+# 1. 切到含 Linux 适配的分支
+git checkout linux-desktop-build
 
-Review the [safety notice](SAFETY.md) before running the project.
-
-## Run
-
-### Run from `npm`
-
-Install `Node.js`, then run:
-
-```sh
-npx @deepseek-ai/dsh web
-```
-
-The command starts the Web UI at `http://127.0.0.1:3080` by default and opens it in the default browser for a local launch. An SSH launch only prints the host URL because the SSH client or editor owns the local forwarded address. Pass `--no-open` to run the server without opening a browser. See [Web UI guide](docs/user/guide/index.md).
-
-### Run from source
-
-To run from a repository checkout:
-
-```sh
-git clone https://github.com/deepseek-ai/deepseek-harness.git
-cd deepseek-harness
+# 2. 安装依赖（.npmrc 已配 npmmirror；海外可删掉该文件走官方 registry）
 pnpm install
-pnpm run build
-pnpm dsh web
+
+# 3. 出 AppImage（按 CPU 选）
+pnpm --filter @deepseek-ai/dsh-desktop run package:linux:x64      # x86_64
+# pnpm --filter @deepseek-ai/dsh-desktop run package:linux:arm64  # arm 板
+
+# 4. 运行（产物在 apps/desktop/.desktop-build/dist/linux-x64/）
+chmod +x DeepSeek-Harness-*.AppImage && ./DeepSeek-Harness-*.AppImage
 ```
 
-`pnpm run build` prepares the repository artifacts. `pnpm dsh web` uses those built artifacts without rebuilding.
-
-## Community and support
-
-- Submit feedback or bug reports through [GitHub Discussions](https://github.com/deepseek-ai/deepseek-harness/discussions).
-- Add the [`dsh-plugin`](https://github.com/topics/dsh-plugin) topic to your plugin repository for discoverability.
-- Join <a href="https://discord.gg/4MrtZUhpxg">DeepSeek Harness Discord community</a>.
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Development
-
-Start with the [development guide](docs/development.md) and [architecture documentation](docs/architecture.md).
-
-`pnpm run dev:web` builds, serves, and rebuilds client bundles on source edits in one terminal, and `make help` lists the matching Make targets for Web and Desktop; the guide's application commands section owns the full table.
-
-For agents, follow [AGENTS.md](AGENTS.md).
-
-## Citation
-
-```bibtex
-@misc{deepseek-harness2026,
-  title={DeepSeek Harness: Everything is a Plugin},
-  author={DeepSeek-AI},
-  year={2026},
-  publisher={GitHub},
-  howpublished={\url{https://github.com/deepseek-ai/deepseek-harness}},
-}
+验证运行时可执行 `dsh web` 起本地服务：
+```bash
+cd apps/desktop/.desktop-build/targets/linux-x64/dsh
+node node_modules/@deepseek-ai/dsh/lib/bin.js web --no-open
 ```
 
-## License
+---
 
-[MIT](LICENSE)
-
-Third-party dependencies and their licenses are disclosed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+以下为主项目说明（官方原文）。

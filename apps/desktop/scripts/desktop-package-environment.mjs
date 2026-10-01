@@ -21,12 +21,18 @@ const FILE_SETTINGS = ['DSH_DESKTOP_WINDOWS_CER_FILE', 'DSH_DESKTOP_WINDOWS_SIGN
 
 /**
  * Read the target's required UTF-8 dotenv file; release settings never fall back to ambient values.
- * @param {'win32' | 'darwin'} platform Target platform.
+ * Linux ships unsigned with no signing/notarization/mandatory-update credentials, so no env
+ * file is required; optional overrides still come from the ambient environment.
+ * @param {'win32' | 'darwin' | 'linux'} platform Target platform.
  * @param {NodeJS.ProcessEnv} environment Parent environment, retained only for unrelated build tools.
  * @param {string} appRoot Desktop application directory; relative credential paths resolve here.
  * @returns {NodeJS.ProcessEnv} Isolated environment with file-owned release settings.
  */
 export function loadDesktopPackageEnvironment(platform, environment = process.env, appRoot = APP_ROOT) {
+  if (platform === 'linux') {
+    // Unsigned Linux build: no credentials, no signing identity, no update-feed secrets.
+    return Object.fromEntries(Object.entries(environment).filter(([name]) => !AMBIENT_RELEASE_SETTING.test(name)))
+  }
   const path = join(appRoot, platform === 'win32' ? '.env.windows' : '.env.macos')
   let contents
   try {
@@ -81,9 +87,11 @@ export function validateDesktopPackageEnvironment(environment, target, options =
   resolveNpmRegistry(environment)
   resolveDesktopPolicyEnvironment(environment)
   if (target.platform === 'darwin') resolveMacOSPackageSettings(environment)
-  else resolveWindowsPackageSettings(environment)
+  else if (target.platform === 'win32') resolveWindowsPackageSettings(environment)
+  // linux: unsigned, no signing/notarization settings to resolve.
   if (options.unsigned) return
   if (!options.prepareOnly) resolveDesktopAutoUpdateConfig(environment, target.platform, target.arch)
+  if (target.platform === 'linux') return
   if (target.platform === 'win32') {
     if (!options.prepareOnly) createWindowsTokenSigner({
       certificateFile: environment.DSH_DESKTOP_WINDOWS_CER_FILE,

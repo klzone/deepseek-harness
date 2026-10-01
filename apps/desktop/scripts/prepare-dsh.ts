@@ -30,6 +30,7 @@ import {
   signMacOSRuntime,
 } from './macos-runtime.ts'
 import { desktopTargetPlatform, resolveDesktopBuildTarget, resolveDesktopTargetBuildPaths } from './desktop-build-paths.mjs'
+import { installElectronSafeSharp, fixLibreOfficeEngineFallback } from './linux-runtime-adjustments.ts'
 import { desktopRuntimeFileExclusion } from './runtime-file-policy.ts'
 import { selectOfficeEngine } from '../../../scripts/libreoffice-packages.mjs'
 
@@ -41,7 +42,7 @@ const STORE_ROOT = join(BUILD_ROOT, 'store')
 const RUNTIME_ROOT = BUILD_PATHS.runtime
 const PNPM_BUILD_STATE = BUILD_PATHS.dshPnpm
 const PACKAGE_SET_ROOT = BUILD_PATHS.packageSet
-const NODE = join(BUILD_PATHS.electron, process.platform === 'win32' ? 'electron.exe' : 'Electron.app/Contents/MacOS/Electron')
+const NODE = join(BUILD_PATHS.electron, process.platform === 'win32' ? 'electron.exe' : process.platform === 'darwin' ? 'Electron.app/Contents/MacOS/Electron' : 'electron')
 const PNPM = join(RUNTIME_ROOT, 'pnpm', 'bin', 'pnpm.mjs')
 
 function manifestVersion(path: string, subject: string): string {
@@ -145,6 +146,15 @@ async function main(): Promise<void> {
       name: '@deepseek-ai/dsh-desktop-runtime', private: true, version: release.version, type: 'module',
       dependencies: Object.fromEntries(packageSet.packages.map(entry => [entry.name, entry.version])),
     }, undefined, 2)}\n`)
+    // linux 运行时调整：sharp 必须换成 electron-safe 重建（glib 符号冲突，
+    // electron/electron#46323）；LibreOfficeKit 的"原生引擎是否安装"探针在 ASAR
+    // 归档里 lstat 返回 null 而非 undefined，不修则 Linux 永远无法回退 WASM 引擎。
+    if (target.platform === 'linux') {
+      await packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'runtime:linux-adjustments', async () => {
+        await installElectronSafeSharp(DSH_OUTPUT_ROOT, BUILD_PATHS.downloads, resolveDesktopBuildTarget())
+        fixLibreOfficeEngineFallback(DSH_OUTPUT_ROOT)
+      })
+    }
     for (const file of DESKTOP_HOST_RUNTIME_FILES) {
       if (!existsSync(join(DSH_OUTPUT_ROOT, 'node_modules', DESKTOP_HOST_PACKAGE, file))) {
         throw new Error(`desktop runtime: missing private Host file ${file}`)

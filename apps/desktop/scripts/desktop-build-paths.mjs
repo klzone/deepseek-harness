@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path'
 
 const APP_ROOT = resolve(import.meta.dirname, '..')
 const BUILD_ROOT = join(APP_ROOT, '.desktop-build')
-const SUPPORTED_TARGETS = new Set(['mac-arm64', 'mac-x64', 'win-x64'])
+const SUPPORTED_TARGETS = new Set(['mac-arm64', 'mac-x64', 'win-x64', 'linux-x64', 'linux-arm64'])
 
 /**
  * Resolve the fixed build target selected by a packaging environment.
@@ -69,7 +69,7 @@ export function desktopTargetBuildPaths(target) {
 export function desktopTargetPlatform(target) {
   assertSupportedTarget(target)
   return {
-    platform: /** @type {'darwin' | 'win32'} */ (target === 'win-x64' ? 'win32' : 'darwin'),
+    platform: /** @type {'darwin' | 'win32'} */ (target === 'win-x64' ? 'win32' : target.startsWith('linux-') ? 'linux' : 'darwin'),
     arch: /** @type {'arm64' | 'x64'} */ (target === 'mac-arm64' ? 'arm64' : 'x64'),
   }
 }
