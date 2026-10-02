@@ -47,7 +47,7 @@ export interface DesktopUpdateState {
   /** Main-owned preparation cause; UI wording is selected by the active locale. */
   readonly preparationFailure?: DesktopUpdatePreparationFailureKind
   /** Community Linux: newer fork release found via the GitHub API instead of an ESR feed. */
-  readonly linuxRelease?: { version: string; tag: string; htmlUrl: string; debUrl: string | undefined; appImageUrl: string | undefined }
+  readonly linuxRelease?: { version: string; tag: string; htmlUrl: string; prerelease: boolean; debUrl: string | undefined; appImageUrl: string | undefined }
 }
 
 /** Classified failure copy selected by the Web locale without exposing raw updater diagnostics. */

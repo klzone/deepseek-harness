@@ -6,6 +6,7 @@ export interface LinuxReleaseInfo {
   readonly version: string
   readonly tag: string
   readonly htmlUrl: string
+  readonly prerelease: boolean
   readonly debUrl: string | undefined
   readonly appImageUrl: string | undefined
 }
@@ -18,7 +19,14 @@ export interface LinuxUpdateChecker {
   check(currentVersion: string): Promise<LinuxReleaseInfo | undefined>
 }
 
-/** Fetches the latest release of the community fork via the GitHub API. */
+interface GitHubReleasePayload {
+  readonly tag_name: string
+  readonly html_url: string
+  readonly prerelease: boolean
+  readonly assets: { readonly name: string; readonly browser_download_url: string }[]
+}
+
+/** Fetches the newest release of the community fork via the GitHub API. */
 export class GitHubReleaseUpdateChecker implements LinuxUpdateChecker {
   constructor(
     private readonly repo: string,
@@ -27,7 +35,10 @@ export class GitHubReleaseUpdateChecker implements LinuxUpdateChecker {
   ) {}
 
   async check(currentVersion: string): Promise<LinuxReleaseInfo | undefined> {
-    const api = `https://api.github.com/repos/${this.repo}/releases/latest`
+    // The /releases/latest endpoint only returns non-prerelease releases; community rc
+    // releases are marked prerelease, so fall back to the full list and pick the newest
+    // release whose version we can parse.
+    const api = `https://api.github.com/repos/${this.repo}/releases?per_page=30`
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), this.timeoutMs)
     let response: Response
@@ -39,23 +50,25 @@ export class GitHubReleaseUpdateChecker implements LinuxUpdateChecker {
     if (!response.ok) {
       throw new Error(`GitHub release lookup failed with HTTP ${response.status}`)
     }
-    const body = (await response.json()) as {
-      tag_name: string
-      html_url: string
-      assets: { name: string; browser_download_url: string }[]
+    const releases = (await response.json()) as GitHubReleasePayload[]
+    let release: GitHubReleasePayload | undefined
+    for (const candidate of releases) {
+      // Our convention: dsh-desktop-linux-<semver>; strip the prefix when present.
+      const parsed = valid(candidate.tag_name.replace(/^dsh-desktop-linux-/, ''))
+      if (parsed !== null && gt(parsed, currentVersion) === true) {
+        release = candidate
+        break
+      }
+      release ??= candidate
     }
-    const tag = body.tag_name
-    // Our convention: dsh-desktop-linux-<semver>; strip the prefix when present.
-    const rawVersion = tag.replace(/^dsh-desktop-linux-/, '')
-    const version = valid(rawVersion) === null ? undefined : rawVersion
-    if (version === undefined) return undefined
-    if (gt(version, currentVersion) !== true) return undefined
+    if (release === undefined) return undefined
     const findAsset = (suffix: string) =>
-      body.assets.find((asset) => asset.name.endsWith(suffix))?.browser_download_url
+      release.assets.find((asset) => asset.name.endsWith(suffix))?.browser_download_url
     return {
-      version,
-      tag,
-      htmlUrl: body.html_url,
+      version: valid(release.tag_name.replace(/^dsh-desktop-linux-/, '')) ?? release.tag_name,
+      tag: release.tag_name,
+      htmlUrl: release.html_url,
+      prerelease: release.prerelease,
       debUrl: findAsset('.deb'),
       appImageUrl: findAsset('.AppImage'),
     }
