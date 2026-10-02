@@ -31,7 +31,10 @@ const FILE_SETTINGS = ['DSH_DESKTOP_WINDOWS_CER_FILE', 'DSH_DESKTOP_WINDOWS_SIGN
 export function loadDesktopPackageEnvironment(platform, environment = process.env, appRoot = APP_ROOT) {
   if (platform === 'linux') {
     // Unsigned Linux build: no credentials, no signing identity, no update-feed secrets.
-    return Object.fromEntries(Object.entries(environment).filter(([name]) => !AMBIENT_RELEASE_SETTING.test(name)))
+    // The ambient filter would also strip DSH_DESKTOP_APP_ID, so default it for unsigned packaging.
+    const filtered = Object.fromEntries(Object.entries(environment).filter(([name]) => !AMBIENT_RELEASE_SETTING.test(name)))
+    filtered.DSH_DESKTOP_APP_ID = filtered.DSH_DESKTOP_APP_ID ?? 'com.deepseek.harness'
+    return filtered
   }
   const path = join(appRoot, platform === 'win32' ? '.env.windows' : '.env.macos')
   let contents
@@ -85,7 +88,9 @@ function requireReadableFile(environment, name) {
 export function validateDesktopPackageEnvironment(environment, target, options = {}) {
   resolveDesktopAppId(environment)
   resolveNpmRegistry(environment)
-  resolveDesktopPolicyEnvironment(environment)
+  // Linux unsigned builds ship no update feed and no mandatory policy service, so neither
+  // deployment origins (test/prod) are required; skip policy resolution for the linux target.
+  if (target.platform !== 'linux') resolveDesktopPolicyEnvironment(environment)
   if (target.platform === 'darwin') resolveMacOSPackageSettings(environment)
   else if (target.platform === 'win32') resolveWindowsPackageSettings(environment)
   // linux: unsigned, no signing/notarization settings to resolve.
