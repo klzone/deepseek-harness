@@ -1,6 +1,69 @@
-# DeepSeek Harness
+# DeepSeek Harness — 社区 Linux 发行版
 
 [English](README.md) | 中文
+
+> **关于本仓库：** 官方 [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)
+> （[DeepSeek AI](https://deepseek.com) 开发）的**社区 Linux 发行 fork**，
+> 只增加「可安装的 Linux 桌面构建」，核心运行时不做改动。
+> 官方项目说明以上游仓库 README（[英](https://github.com/deepseek-ai/deepseek-harness/blob/master/README.md) /
+> [中](https://github.com/deepseek-ai/deepseek-harness/blob/master/README.zh.md)）与
+> [官方文档](https://deepseek-harness.github.io/deepseek-harness/) 为准。
+
+## 本仓库特点
+
+- **可安装的 `.deb`（Ubuntu/Debian，amd64）**：发布在本仓库的
+  [GitHub Releases](https://github.com/klzone/deepseek-harness/releases)，附 SHA256 校验文件（`SHA256SUMS`）。
+- **基线与一致性**：官方 dsh `0.2.0-rc.2`（上游提交 `639ed01`），打包迭代 `0.2.1`；
+  内置 dsh 运行时与官方 win/mac 版逐字节一致——本仓库只改 Linux 打包/集成。
+- **启动修复（`0.2.1-alpha.4`/`alpha.5`）**：`postinst` 安装并加载自带的
+  **AppArmor profile**（授予 `userns`），同时保持 `chrome-sandbox` 为 `root:0755`，
+  让 Chromium zygote 走**用户命名空间沙箱**。修复
+  `kernel.apparmor_restrict_unprivileged_userns=1` 系统（如 Ubuntu 26.04）
+  安装后「无法启动」的问题——终端/菜单/systemd 任意上下文均可启动。
+- **桌面集成**：`.desktop` 条目、标准尺寸 hicolor 图标集
+  （512/256/128/64/48/32/24/16），`postinst` 刷新图标/桌面数据库缓存。
+  应用菜单与 dock 图标正常显示。
+- **AppImage 构建（x64 / arm64）**：见 [LINUX.md](LINUX.md)（`linux-desktop-build` 分支）。
+
+## 快速安装（`.deb`）
+
+```bash
+cd /tmp
+REL=https://github.com/klzone/deepseek-harness/releases/download/dsh-desktop-linux-0.2.1-alpha.5
+curl -LO "$REL/deepseek-harness-0.2.1-alpha.5-linux-amd64.deb"
+curl -LO "$REL/SHA256SUMS-alpha.5"
+sha256sum -c SHA256SUMS-alpha.5
+sudo dpkg -i deepseek-harness-0.2.1-alpha.5-linux-amd64.deb
+```
+
+启动：`deepseek-harness`（或从应用菜单）。
+
+## 从源码构建（AppImage）
+
+```bash
+git checkout linux-desktop-build
+pnpm install   # .npmrc 使用 npmmirror；海外可删除该文件走官方 registry
+pnpm --filter @deepseek-ai/dsh-desktop run package:linux:x64     # x86_64
+# pnpm --filter @deepseek-ai/dsh-desktop run package:linux:arm64  # arm64
+chmod +x DeepSeek-Harness-*.AppImage && ./DeepSeek-Harness-*.AppImage
+```
+
+相对官方基线的逐项改动见 [LINUX.md](LINUX.md)。
+
+## 官方项目
+
+- 仓库与文档源：[deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)
+- 官方文档：[deepseek-harness.github.io/deepseek-harness](https://deepseek-harness.github.io/deepseek-harness/)
+- 反馈与 bug：[GitHub Discussions](https://github.com/deepseek-ai/deepseek-harness/discussions)
+- 官方安全说明：[SAFETY.zh.md](SAFETY.zh.md)
+
+## 许可证
+
+[MIT](LICENSE)
+
+---
+
+# 主项目说明（官方原文翻译）
 
 DeepSeek Harness（`dsh`）是由 [DeepSeek AI](https://deepseek.com) 开发的开源 agent harness（智能体框架）。
 
