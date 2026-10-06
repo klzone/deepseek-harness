@@ -1,37 +1,76 @@
-# DeepSeek Harness
+# DeepSeek Harness — Community Linux Distribution
 
-English | [中文](README.zh.md)
+[中文](README.zh.md) | [English](README.md)
 
-DeepSeek Harness (`dsh`) is an open-source agent harness developed by [DeepSeek AI](https://deepseek.com).
+> **About this repository:** a community **Linux distribution fork** of
+> [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)
+> (official project by [DeepSeek AI](https://deepseek.com)).
+> This fork only adds **installable Linux desktop builds** — the core runtime is
+> unmodified. The official project documentation lives in the
+> [upstream repository](https://github.com/deepseek-ai/deepseek-harness) and the
+> [official docs site](https://deepseek-harness.github.io/deepseek-harness/).
+>
+> **关于本仓库：** 官方 [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)
+> （[DeepSeek AI](https://deepseek.com) 开发）的**社区 Linux 发行 fork**，
+> 只增加「可安装的 Linux 桌面构建」，核心运行时不做改动。官方说明以上游仓库与
+> [官方文档](https://deepseek-harness.github.io/deepseek-harness/) 为准。
 
-## 社区 Linux 发行说明（本 fork）
+## What this fork provides / 本仓库特点
 
-> 本仓库为官方 `deepseek-harness` 的社区 Linux 构建 fork（基线：dsh 0.2.0-rc.2，上游提交 `639ed01`）。
-> 官方仓库暂不接受源码 PR，故 Linux 桌面构建支持在此独立维护。详见 **[LINUX.md](LINUX.md)**（`linux-desktop-build` 分支）。
+- **Installable `.deb` (Ubuntu/Debian, amd64)** — packaged in this repo's
+  [GitHub Releases](https://github.com/klzone/deepseek-harness/releases) with
+  SHA256 checksums (`SHA256SUMS`). 可在 Releases 直接下载 `.deb` 安装。
+- **Baseline & parity**: official dsh `0.2.0-rc.2` (upstream commit `639ed01`),
+  packaging iteration `0.2.1`; the dsh runtime inside is byte-identical to the
+  official win/mac builds — only Linux packaging/integration is changed.
+  核心运行时与官方版本逐字节一致，本仓库只改 Linux 打包/集成。
+- **Launch fix (`0.2.1-alpha.4`/`alpha.5`)**: `postinst` installs and loads the
+  bundled **AppArmor profile** (grants `userns`) and keeps `chrome-sandbox` at
+  `root:0755`, so the Chromium zygote uses the **user-namespace sandbox**.
+  Fixes "cannot start" on systems with
+  `kernel.apparmor_restrict_unprivileged_userns=1` (e.g. Ubuntu 26.04) — verified
+  from a plain terminal launch. 修复受限 userns 系统（如 Ubuntu 26.04）安装后
+  「无法启动」的问题，终端/菜单/systemd 任意上下文均可启动。
+- **Desktop integration**: `.desktop` entry, standard-size hicolor icon set
+  (512/256/128/64/48/32/24/16) and icon/desktop-database cache refresh in
+  `postinst`. 应用菜单与 dock 图标正常显示。
+- **AppImage builds (x64 / arm64)** from source — see [LINUX.md](LINUX.md)
+  (`linux-desktop-build` branch).
 
-### 在 Linux 上快速构建 DSH Desktop（AppImage）
+## Quick install (`.deb`) / 快速安装
 
 ```bash
-# 1. 切到含 Linux 适配的分支
+cd /tmp
+REL=https://github.com/klzone/deepseek-harness/releases/download/dsh-desktop-linux-0.2.1-alpha.5
+curl -LO "$REL/deepseek-harness-0.2.1-alpha.5-linux-amd64.deb"
+curl -LO "$REL/SHA256SUMS-alpha.5"
+sha256sum -c SHA256SUMS-alpha.5
+sudo dpkg -i deepseek-harness-0.2.1-alpha.5-linux-amd64.deb
+```
+
+启动：`deepseek-harness`（或从应用菜单）。Start with `deepseek-harness`
+(or from the application menu).
+
+## Build from source (AppImage) / 从源码构建
+
+```bash
 git checkout linux-desktop-build
-
-# 2. 安装依赖（.npmrc 已配 npmmirror；海外可删掉该文件走官方 registry）
-pnpm install
-
-# 3. 出 AppImage（按 CPU 选）
-pnpm --filter @deepseek-ai/dsh-desktop run package:linux:x64      # x86_64
-# pnpm --filter @deepseek-ai/dsh-desktop run package:linux:arm64  # arm 板
-
-# 4. 运行（产物在 apps/desktop/.desktop-build/dist/linux-x64/）
+pnpm install   # .npmrc uses npmmirror; remove it for the official registry
+pnpm --filter @deepseek-ai/dsh-desktop run package:linux:x64     # x86_64
+# pnpm --filter @deepseek-ai/dsh-desktop run package:linux:arm64  # arm64
 chmod +x DeepSeek-Harness-*.AppImage && ./DeepSeek-Harness-*.AppImage
 ```
 
-验证运行时可执行 `dsh web` 起本地服务：
-```bash
-cd apps/desktop/.desktop-build/targets/linux-x64/dsh
-node node_modules/@deepseek-ai/dsh/lib/bin.js web --no-open
-```
+Per-file changes vs. the official baseline are documented in [LINUX.md](LINUX.md).
+相对官方基线的逐项改动见 [LINUX.md](LINUX.md)。
 
----
+## Official project / 官方项目
 
-以下为主项目说明（官方原文）。
+- Repository & docs source: [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)
+- Documentation: [deepseek-harness.github.io/deepseek-harness](https://deepseek-harness.github.io/deepseek-harness/)
+- Feedback & bug reports: [GitHub Discussions](https://github.com/deepseek-ai/deepseek-harness/discussions)
+- Safety notice (official): [SAFETY.md](SAFETY.md)
+
+## License / 许可证
+
+[MIT](LICENSE)
