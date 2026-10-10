@@ -20,20 +20,26 @@
 - **Installable `.deb` (Ubuntu/Debian, amd64)** — packaged in this repo's
   [GitHub Releases](https://github.com/klzone/deepseek-harness/releases) with
   SHA256 checksums (`SHA256SUMS`). 可在 Releases 直接下载 `.deb` 安装。
-- **Baseline & parity**: official dsh `0.2.0-rc.2` (upstream commit `639ed01`),
-  packaging iteration `0.2.1`; the dsh runtime inside is byte-identical to the
-  official win/mac builds — only Linux packaging/integration is changed.
-  核心运行时与官方版本逐字节一致，本仓库只改 Linux 打包/集成。
-- **Launch fix (`0.2.1-alpha.4`/`alpha.5`)**: `postinst` installs and loads the
-  bundled **AppArmor profile** (grants `userns`) and keeps `chrome-sandbox` at
-  `root:0755`, so the Chromium zygote uses the **user-namespace sandbox**.
-  Fixes "cannot start" on systems with
-  `kernel.apparmor_restrict_unprivileged_userns=1` (e.g. Ubuntu 26.04) — verified
-  from a plain terminal launch. 修复受限 userns 系统（如 Ubuntu 26.04）安装后
-  「无法启动」的问题，终端/菜单/systemd 任意上下文均可启动。
+- **Baseline & parity**: current `.deb` release is based on official dsh
+  `0.2.1-alpha.2` (upstream commit `d743267`); the earlier iteration was based
+  on `0.2.0-rc.2` (commit `639ed01`) / upstream `0.2.1-alpha.1`. The dsh
+  runtime inside is byte-identical to the official win/mac build of the same
+  base — only Linux packaging/integration is changed.
+  当前 `.deb` 基于官方 dsh `0.2.1-alpha.2`（上游提交 `d743267`）；更早的迭代
+  基于 `0.2.0-rc.2`（`639ed01`）/ 上游 `0.2.1-alpha.1`。核心运行时与同一基线的
+  官方 win/mac 构建逐字节一致，本仓库只改 Linux 打包/集成。
+- **Launch fix**: `postinst` installs and loads the bundled **AppArmor
+  profile** (grants `userns`) and keeps `chrome-sandbox` at `root:0755`, so the
+  Chromium zygote uses the **user-namespace sandbox** in every launch context
+  (terminal, menu, systemd). Fixes "cannot start" on systems with
+  `kernel.apparmor_restrict_unprivileged_userns=1` (e.g. Ubuntu 26.04).
+  安装时自动安装/加载随包 AppArmor profile（放行 userns），`chrome-sandbox`
+  保持 0755 不走 SUID，受限 userns 系统（如 Ubuntu 26.04）任意上下文均可启动。
 - **Desktop integration**: `.desktop` entry, standard-size hicolor icon set
-  (512/256/128/64/48/32/24/16) and icon/desktop-database cache refresh in
-  `postinst`. 应用菜单与 dock 图标正常显示。
+  (512/256/128/64/48/32/24/16, generated from the 1104px artwork) and
+  icon/desktop-database cache refresh in `postinst`; window association with
+  the dock pinned launcher aligned via `desktopName`. 应用菜单与 dock 图标
+  正常显示。
 - **AppImage builds (x64 / arm64)** from source — see [LINUX.md](LINUX.md)
   (`linux-desktop-build` branch).
 
@@ -41,15 +47,27 @@
 
 ```bash
 cd /tmp
-REL=https://github.com/klzone/deepseek-harness/releases/download/dsh-desktop-linux-0.2.1-alpha.5
-curl -LO "$REL/deepseek-harness-0.2.1-alpha.5-linux-amd64.deb"
-curl -LO "$REL/SHA256SUMS-alpha.5"
-sha256sum -c SHA256SUMS-alpha.5
-sudo dpkg -i deepseek-harness-0.2.1-alpha.5-linux-amd64.deb
+REL=https://github.com/klzone/deepseek-harness/releases/download/dsh-desktop-linux-0.2.1-alpha.2
+curl -LO "$REL/deepseek-harness-0.2.1-alpha.2-linux-amd64.deb"
+curl -LO "$REL/SHA256SUMS-0.2.1-alpha.2"
+sha256sum -c SHA256SUMS-0.2.1-alpha.2
+sudo apt install ./deepseek-harness-0.2.1-alpha.2-linux-amd64.deb
 ```
 
 启动：`deepseek-harness`（或从应用菜单）。Start with `deepseek-harness`
 (or from the application menu).
+
+> **Version ordering note / 版本序说明**: the earlier
+> `dsh-desktop-linux-0.2.1-alpha.5` release carries dpkg package version
+> `0.2.1~alpha.5` (a community repackaging of the *older* upstream
+> `0.2.1-alpha.1` base). This release is package version `0.2.1~alpha.2` —
+> semantically newer content, but lower in dpkg ordering. If `0.2.1~alpha.5`
+> is installed, upgrade with
+> `sudo apt install --allow-downgrade ./…-alpha.2…deb`, or
+> `sudo apt purge deepseek-harness` first.
+> 若本机装过更早发布的 `0.2.1~alpha.5`（基于旧上游 alpha.1 的重打包），
+> 安装本包需 `sudo apt install --allow-downgrade` 或先 `sudo apt purge
+> deepseek-harness`。
 
 ## Build from source (AppImage) / 从源码构建
 
