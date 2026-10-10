@@ -13,15 +13,17 @@
 
 - **可安装的 `.deb`（Ubuntu/Debian，amd64）**：发布在本仓库的
   [GitHub Releases](https://github.com/klzone/deepseek-harness/releases)，附 SHA256 校验文件（`SHA256SUMS`）。
-- **基线与一致性**：官方 dsh `0.2.0-rc.2`（上游提交 `639ed01`），打包迭代 `0.2.1`；
-  内置 dsh 运行时与官方 win/mac 版逐字节一致——本仓库只改 Linux 打包/集成。
-- **启动修复（`0.2.1-alpha.4`/`alpha.5`）**：`postinst` 安装并加载自带的
-  **AppArmor profile**（授予 `userns`），同时保持 `chrome-sandbox` 为 `root:0755`，
-  让 Chromium zygote 走**用户命名空间沙箱**。修复
+- **基线与一致性**：当前 `.deb` 基于官方 dsh `0.2.1-alpha.2`（上游提交 `d743267`）；
+  更早的迭代基于 `0.2.0-rc.2`（上游提交 `639ed01`）/ 上游 `0.2.1-alpha.1`。
+  内置 dsh 运行时与同一基线的官方 win/mac 构建逐字节一致——本仓库只改 Linux 打包/集成。
+- **启动修复**：`postinst` 安装并加载自带的 **AppArmor profile**（授予 `userns`），
+  同时保持 `chrome-sandbox` 为 `root:0755`，让 Chromium zygote 在任意启动上下文
+  （终端/菜单/systemd）走**用户命名空间沙箱**。修复
   `kernel.apparmor_restrict_unprivileged_userns=1` 系统（如 Ubuntu 26.04）
-  安装后「无法启动」的问题——终端/菜单/systemd 任意上下文均可启动。
+  安装后「无法启动」的问题。
 - **桌面集成**：`.desktop` 条目、标准尺寸 hicolor 图标集
-  （512/256/128/64/48/32/24/16），`postinst` 刷新图标/桌面数据库缓存。
+  （512/256/128/64/48/32/24/16，由 1104px 素材生成），`postinst` 刷新图标/桌面
+  数据库缓存；`desktopName` 对齐窗口与 dock 固定项。
   应用菜单与 dock 图标正常显示。
 - **AppImage 构建（x64 / arm64）**：见 [LINUX.md](LINUX.md)（`linux-desktop-build` 分支）。
 
@@ -29,14 +31,21 @@
 
 ```bash
 cd /tmp
-REL=https://github.com/klzone/deepseek-harness/releases/download/dsh-desktop-linux-0.2.1-alpha.5
-curl -LO "$REL/deepseek-harness-0.2.1-alpha.5-linux-amd64.deb"
-curl -LO "$REL/SHA256SUMS-alpha.5"
-sha256sum -c SHA256SUMS-alpha.5
-sudo dpkg -i deepseek-harness-0.2.1-alpha.5-linux-amd64.deb
+REL=https://github.com/klzone/deepseek-harness/releases/download/dsh-desktop-linux-0.2.1-alpha.2
+curl -LO "$REL/deepseek-harness-0.2.1-alpha.2-linux-amd64.deb"
+curl -LO "$REL/SHA256SUMS-0.2.1-alpha.2"
+sha256sum -c SHA256SUMS-0.2.1-alpha.2
+sudo apt install ./deepseek-harness-0.2.1-alpha.2-linux-amd64.deb
 ```
 
 启动：`deepseek-harness`（或从应用菜单）。
+
+> **版本序说明**：更早发布的 `dsh-desktop-linux-0.2.1-alpha.5` 的 dpkg 包版本为
+> `0.2.1~alpha.5`（基于**旧**上游 `0.2.1-alpha.1` 基线的社区重打包）。本次发布
+> 包版本为 `0.2.1~alpha.2`（基于官方 `0.2.1-alpha.2` 基线，内容更新，但 dpkg
+> 版本序更低）。若已安装 `0.2.1~alpha.5`，安装本包需
+> `sudo apt install --allow-downgrade ./…-alpha.2…deb`，或先 `sudo apt purge
+> deepseek-harness`。
 
 ## 从源码构建（AppImage）
 
