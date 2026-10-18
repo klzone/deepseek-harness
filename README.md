@@ -6,14 +6,14 @@ DeepSeek Harness (`dsh`) is an open-source agent harness developed by [DeepSeek 
 
 ## 社区 Linux 发行说明（本 fork）
 
-> 本仓库为官方 `deepseek-harness` 的社区 Linux 构建 fork（基线：dsh 0.2.0-rc.2，上游提交 `639ed01`）。
-> 官方仓库暂不接受源码 PR，故 Linux 桌面构建支持在此独立维护。详见 **[LINUX.md](LINUX.md)**（`linux-desktop-build` 分支）。
+> 本仓库为官方 `deepseek-harness` 的社区 Linux 构建 fork（基线：dsh 0.2.1-rc.2，上游提交 `687f282e86`）。
+> 官方仓库暂不接受源码 PR，故 Linux 桌面构建支持在此独立维护。详见 **[LINUX.md](LINUX.md)**（`linux-0.2.1-rc.2` 分支）。
 
 ### 在 Linux 上快速构建 DSH Desktop（AppImage）
 
 ```bash
 # 1. 切到含 Linux 适配的分支
-git checkout linux-desktop-build
+git checkout linux-0.2.1-rc.2
 
 # 2. 安装依赖（.npmrc 已配 npmmirror；海外可删掉该文件走官方 registry）
 pnpm install
@@ -22,8 +22,8 @@ pnpm install
 pnpm --filter @deepseek-ai/dsh-desktop run package:linux:x64      # x86_64
 # pnpm --filter @deepseek-ai/dsh-desktop run package:linux:arm64  # arm 板
 
-# 4. 运行（产物在 apps/desktop/.desktop-build/dist/linux-x64/）
-chmod +x DeepSeek-Harness-*.AppImage && ./DeepSeek-Harness-*.AppImage
+# 4. 运行（产物在 apps/desktop/.desktop-build/targets/linux-x64/unsigned-artifacts/）
+chmod +x deepseek-harness-*-linux-x86_64-unsigned.AppImage && ./deepseek-harness-*-linux-x86_64-unsigned.AppImage
 ```
 
 验证运行时可执行 `dsh web` 起本地服务：
