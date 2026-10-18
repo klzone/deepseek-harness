@@ -36,13 +36,22 @@ export function localMacOSPackageEnvironment(environment = process.env) {
 /**
  * Read a machine preset when selected, otherwise the target's required dotenv; no ambient release fallback.
  * PACKAGE_TEST_RELEASE_ID overrides the test preset only; blank retains its configured ID.
- * @param {'win32' | 'darwin'} platform Target platform.
+ * Linux ships unsigned with no signing/notarization/mandatory-update credentials, so no env
+ * file is required; optional overrides still come from the ambient environment.
+ * @param {'win32' | 'darwin' | 'linux'} platform Target platform.
  * @param {NodeJS.ProcessEnv} environment Parent environment, retained only for unrelated build tools.
  * @param {string} appRoot Desktop application directory; relative credential paths resolve here.
  * @param {{ unsigned?: boolean, prepareOnly?: boolean }} options Unsigned presets and Windows preparation-only presets never read signing credentials.
  * @returns {NodeJS.ProcessEnv} Isolated environment with file-owned release settings.
  */
 export function loadDesktopPackageEnvironment(platform, environment = process.env, appRoot = APP_ROOT, options = {}) {
+  if (platform === 'linux') {
+    // Unsigned Linux build: no credentials, no signing identity, no update-feed secrets.
+    // The ambient filter would also strip DSH_DESKTOP_APP_ID, so default it for unsigned packaging.
+    const filtered = Object.fromEntries(Object.entries(environment).filter(([name]) => !AMBIENT_RELEASE_SETTING.test(name)))
+    filtered.DSH_DESKTOP_APP_ID = filtered.DSH_DESKTOP_APP_ID ?? 'com.deepseek.harness'
+    return filtered
+  }
   const preset = environment.DSH_PACKAGING_PRESET
   let path = join(appRoot, platform === 'win32' ? '.env.windows' : '.env.macos')
   if (preset !== undefined) {
@@ -136,11 +145,15 @@ function requireReadableFile(environment, name) {
 export function validateDesktopPackageEnvironment(environment, target, options = {}) {
   resolveDesktopAppId(environment)
   resolveNpmRegistry(environment)
-  if (target.platform !== 'darwin' || !options.unsigned) resolveDesktopPolicyEnvironment(environment)
+  // Linux unsigned builds ship no update feed and no mandatory policy service, so neither
+  // deployment origins (test/prod) are required; skip policy resolution for the linux target.
+  if (target.platform !== 'linux' && (target.platform !== 'darwin' || !options.unsigned)) resolveDesktopPolicyEnvironment(environment)
   if (target.platform === 'darwin') resolveMacOSPackageSettings(environment)
-  else resolveWindowsPackageSettings(environment)
+  else if (target.platform === 'win32') resolveWindowsPackageSettings(environment)
+  // linux: unsigned, no signing/notarization settings to resolve.
   if (options.unsigned) return
   if (!options.prepareOnly) resolveDesktopAutoUpdateConfig(environment, target.platform, target.arch)
+  if (target.platform === 'linux') return
   if (target.platform === 'win32') {
     if (!options.prepareOnly) createWindowsTokenSigner({
       certificateFile: environment.DSH_DESKTOP_WINDOWS_CER_FILE,

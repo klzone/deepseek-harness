@@ -12,7 +12,9 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
-import { createToolResultMessage, type ToolCallBlock } from '@deepseek-ai/dsh-llm'
+import { randomUUID } from 'node:crypto'
+import { brandString } from '@deepseek-ai/dsh-brand'
+import { createToolResultMessage, type ToolCallBlock, type ToolCallId } from '@deepseek-ai/dsh-llm'
 import type { Session, SessionSeq, UserMessage } from '@deepseek-ai/dsh-session'
 import { TOOL_ABORTED_BEFORE_DISPATCH, TOOL_RUNTIME_SCHEDULER, type ToolExecutionInput, type ToolExecutionMode, type ToolExecutionResult, type ToolRunContext } from '@deepseek-ai/dsh-tools'
 import { assertNever } from '@deepseek-ai/dsh-util-values'
@@ -36,6 +38,16 @@ interface GroupOutcome {
   aborted: boolean
   /** Whether any committed result carried {@link ToolExecutionResult.concludesTurn}. */
   concluded: boolean
+}
+
+/**
+ * Normalize one provider call id for logging: empty ids mint a session-local
+ * replacement so the persisted tool/call row and its result stay correlated.
+ * @param id - Provider-issued call id, possibly empty from interaction paths.
+ * @returns The id, or a minted replacement when it is empty.
+ */
+function normalizeCallId(id: string): ToolCallId {
+  return id.length > 0 ? id as ToolCallId : brandString<ToolCallId>(`call_${randomUUID().replace(/-/gu, '')}`)
 }
 
 /**
@@ -69,16 +81,22 @@ export async function executeToolCalls(
   const { session } = agent
 
   // Inputs are distinct because tools/execute wrappers may replace `exec.signal`.
-  const planned: PlannedCall[] = toolCalls.map(block => ({
-    block,
-    exec: {
-      callId: block.id,
-      name: block.name,
-      arguments: parseArguments(block.arguments),
-      agent,
-      signal,
-    },
-  }))
+  // Normalize call ids and names so persisted tool/call and tool/result rows stay
+  // valid (an empty call id would corrupt the session log on the next load).
+  const planned: PlannedCall[] = toolCalls.map(block => {
+    const callId = normalizeCallId(block.id)
+    const name = block.name.length > 0 ? block.name : 'tool'
+    return {
+      block: callId === block.id ? block : { ...block, id: callId, name },
+      exec: {
+        callId,
+        name,
+        arguments: parseArguments(block.arguments),
+        agent,
+        signal,
+      },
+    }
+  })
 
   let next = 0
   let concluded = false
