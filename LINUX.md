@@ -76,6 +76,24 @@ node node_modules/@deepseek-ai/dsh/lib/bin.js web --no-open
 ./DeepSeek-Harness-<version>.AppImage
 ```
 
+## 已安装版使用 CLI（deb / AppImage）
+
+安装版自带 CLI 启动器 `resources/runtime/cli/bin/dsh`（0.2.1-rc.3 起已适配
+Linux 布局：自动定位与 `resources/` 同级的 `deepseek-harness` 可执行文件）：
+
+```bash
+# deb 安装：直接运行
+'/opt/DeepSeek Harness/resources/runtime/cli/bin/dsh' --version
+'/opt/DeepSeek Harness/resources/runtime/cli/bin/dsh' web --no-open
+
+# 想在任意 shell 里用 dsh 命令，可软链进 PATH：
+ln -s '/opt/DeepSeek Harness/resources/runtime/cli/bin/dsh' ~/.local/bin/dsh
+```
+
+> 注意：0.2.1-rc.2 的启动器写死了 macOS 路径（`../MacOS/DeepSeek Harness`），
+> 在 Linux 上会报 `not found`；若 `~/.local/bin/dsh` 是 0.1.x（tauri 时代）
+> 遗留 shim，可直接用上面的软链覆盖它。
+
 ## 升级与"检查更新"
 
 **应用内检查更新**：本构建没有官方 ESR 更新通道（unsigned、无 feed），菜单里的
