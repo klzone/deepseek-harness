@@ -26,6 +26,21 @@ interface GitHubReleasePayload {
   readonly assets: { readonly name: string; readonly browser_download_url: string }[]
 }
 
+/** Our tag convention: `dsh-desktop-linux-<semver>`; the prefix is optional. */
+function releaseVersion(tag: string): string | null {
+  return valid(tag.replace(/^dsh-desktop-linux-/, ''))
+}
+
+/**
+ * Restore the semver hyphen that Debian package metadata rewrites to a tilde (`0.2.1~rc.2`),
+ * so an installed version read from packaging metadata still compares against release tags.
+ * @param version - Version string reported by the installed application.
+ * @returns A string parseable by semver when the original is a semver with a rewritten hyphen.
+ */
+function normalizeInstalledVersion(version: string): string {
+  return version.trim().replace('~', '-')
+}
+
 /** Fetches the newest release of the community fork via the GitHub API. */
 export class GitHubReleaseUpdateChecker implements LinuxUpdateChecker {
   constructor(
@@ -36,8 +51,7 @@ export class GitHubReleaseUpdateChecker implements LinuxUpdateChecker {
 
   async check(currentVersion: string): Promise<LinuxReleaseInfo | undefined> {
     // The /releases/latest endpoint only returns non-prerelease releases; community rc
-    // releases are marked prerelease, so fall back to the full list and pick the newest
-    // release whose version we can parse.
+    // releases may still be marked prerelease, so read the full list instead.
     const api = `https://api.github.com/repos/${this.repo}/releases?per_page=30`
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), this.timeoutMs)
@@ -51,21 +65,32 @@ export class GitHubReleaseUpdateChecker implements LinuxUpdateChecker {
       throw new Error(`GitHub release lookup failed with HTTP ${response.status}`)
     }
     const releases = (await response.json()) as GitHubReleasePayload[]
-    let release: GitHubReleasePayload | undefined
+
+    // Select the highest parseable version. A release whose tag carries no version is skipped
+    // rather than promoted, because falling back to it would report the installed version as
+    // newly discovered and leave the indicator visible after an upgrade.
+    let newest: { readonly release: GitHubReleasePayload; readonly version: string } | undefined
     for (const candidate of releases) {
-      // Our convention: dsh-desktop-linux-<semver>; strip the prefix when present.
-      const parsed = valid(candidate.tag_name.replace(/^dsh-desktop-linux-/, ''))
-      if (parsed !== null && gt(parsed, currentVersion) === true) {
-        release = candidate
-        break
-      }
-      release ??= candidate
+      const version = releaseVersion(candidate.tag_name)
+      if (version === null) continue
+      if (newest === undefined || gt(version, newest.version)) newest = { release: candidate, version }
     }
-    if (release === undefined) return undefined
+    if (newest === undefined) return undefined
+
+    // Self-check: an installed version at or past the newest release is already up to date, so
+    // nothing is announced and the indicator stays hidden.
+    const installed = valid(normalizeInstalledVersion(currentVersion))
+    if (installed !== null) {
+      if (!gt(newest.version, installed)) return undefined
+    } else if (normalizeInstalledVersion(currentVersion) === newest.version) {
+      return undefined
+    }
+
+    const { release, version } = newest
     const findAsset = (suffix: string) =>
-      release.assets.find((asset) => asset.name.endsWith(suffix))?.browser_download_url
+      release.assets.find(asset => asset.name.endsWith(suffix))?.browser_download_url
     return {
-      version: valid(release.tag_name.replace(/^dsh-desktop-linux-/, '')) ?? release.tag_name,
+      version,
       tag: release.tag_name,
       htmlUrl: release.html_url,
       prerelease: release.prerelease,
