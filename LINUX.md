@@ -1,14 +1,14 @@
 # DSH Desktop on Linux（社区发行说明）
 
 > **性质**：这是 [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)
-> 的 **社区 Linux 发行 fork**，基线为官方 `dsh 0.2.1-rc.2`（上游提交 `687f282e86`）。
+> 的 **社区 Linux 发行 fork**，基线为官方 `dsh 0.2.1-rc.3`（上游提交 `1f81c047fc`）。
 > 官方仓库目前只接收插件生态贡献、不收源码 PR（见官方 `CONTRIBUTING.zh.md`），
 > 因此本 fork 作为「可复现的 Linux 构建源」独立维护，欢迎 clone / 构建 / 使用。
 
 ## 它能做什么
 
 - 在 **Linux x64 / arm64** 上编译出 **DSH Desktop（Electron 壳）AppImage**
-- 核心引擎与官方 win/mac 版完全一致（同 `0.2.1-rc.2`、同上游 commit）
+- 核心引擎与官方 win/mac 版完全一致（同 `0.2.1-rc.3`、同上游 commit）
 - 内置 dsh 运行时（`prepare:dsh` 物化 `resources/app.asar/dsh`），CLI `dsh web/headless/tui` 可用
 
 ## 相对官方基线做了哪些适配
@@ -101,7 +101,7 @@ chmod +x update.sh
 
 **已知启动告警（不影响使用）**：
 - 若 `~/.dsh` profile 里残留 0.1.x 时代的插件（`dsh-tauri*`、旧 settings API 插件等），
-  0.2.1-rc.2 运行时会安全 skip 并打 warning，属预期；
+  0.2.1-rc.3 运行时会安全 skip 并打 warning，属预期；
 - `dsh doctor` 子命令在 rc.2 未实装，请勿当作体检命令，用 `--version` / `web` 起服务验证。
 
 ## 与官方 win/mac 版的出入（结论）
