@@ -257,6 +257,8 @@ export function createElectronBuilderConfig(
       // Electron icon); the official icon.png is 1104px, so the 512px companion is used here.
       icon: fileURLToPath(new URL('../resources/icon-512.png', import.meta.url)),
       executableName: 'deepseek-harness',
+      // Debian requires a Maintainer field; the community Linux build is published from this fork.
+      maintainer: 'yvanai <yvanai@outlook.com>',
       target: ['AppImage', 'deb'],
     },
     nsis: {
